@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Question Paper Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media print {
+            body * { visibility: hidden; }
+            #printableArea, #printableArea * { visibility: visible; }
+            #printableArea { position: absolute; left: 0; top: 0; width: 100%; }
+            .no-print { display: none !important; }
+        }
+        input, select, textarea { font-size: 16px !important; }
+        .nature-bg {
+            background-color: #f8fafc;
+            background-image: radial-gradient(#cbd5e1 0.75px, transparent 0.75px), radial-gradient(#cbd5e1 0.75px, #f8fafc 0.75px);
+            background-size: 30px 30px;
+            background-position: 0 0, 15px 15px;
+        }
+    </style>
+</head>
+<body class="nature-bg text-slate-800 antialiased min-h-screen flex flex-col justify-between" onbeforeunload="autoSaveDraft()">
+
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-emerald-900 via-teal-900 to-blue-900 text-white p-4 shadow-lg text-center relative overflow-hidden">
+        <div class="absolute -right-6 -bottom-6 text-white/10 text-8xl select-none pointer-events-none">🌿</div>
+        <h1 class="text-xl sm:text-2xl font-bold tracking-wide">Secure Question Paper Portal</h1>
+        <p class="text-xs sm:text-sm text-emerald-200 mt-0.5">🌱 Multi-Format Section Examination System</p>
+    </header>
+
+    <main class="max-w-2xl mx-auto p-3 sm:p-6 w-full flex-grow">
+        
+        <!-- Teacher Login Card -->
+        <div id="loginSection" class="bg-white/95 backdrop-blur p-6 rounded-2xl shadow-md border border-emerald-100 mb-4">
+            <div class="flex items-center gap-2 mb-3 text-emerald-800">
+                <span class="text-xl">🔒</span>
+                <h2 class="text-lg font-bold">Teacher Secure Login</h2>
+            </div>
+            <p class="text-xs text-slate-500 mb-4">Apna poora naam darj karein taaki aapka data secure rahe aur aapke papers sirf aapko dikhein.</p>
+            <div class="space-y-3">
+                <input type="text" id="teacherName" placeholder="Jaise: Ramesh Kumar Sir" class="border border-slate-300 p-3 rounded-xl w-full focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50/50">
+                <button onclick="teacherLogin()" class="w-full bg-gradient-to-r from-emerald-700 to-teal-700 active:from-emerald-800 text-white font-medium p-3 rounded-xl shadow-md transition flex items-center justify-center gap-2">
+                    <span>Portal Me Pravesh Karein</span> ➔
+                </button>
+            </div>
+        </div>
+
+        <!-- Dashboard Section -->
+        <div id="dashboardSection" class="hidden space-y-4">
+            <div class="bg-white/95 backdrop-blur p-5 rounded-2xl shadow-md border border-emerald-100 flex justify-between items-center">
+                <div>
+                    <h3 id="welcomeMsg" class="font-bold text-base text-slate-800"></h3>
+                    <p class="text-xs text-emerald-600 font-medium">🍃 Secure Access Active</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="newPaperForm()" class="bg-emerald-600 active:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-sm font-medium shadow-sm">+ Naya Paper</button>
+                    <button onclick="teacherLogout()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded-xl text-xs font-medium">Logout</button>
+                </div>
+            </div>
+
+            <!-- Existing Papers & Drafts -->
+            <div class="bg-white/95 backdrop-blur p-5 rounded-2xl shadow-md border border-emerald-100">
+                <h4 class="font-semibold text-slate-700 text-sm mb-3 flex items-center gap-1.5">
+                    <span>📋</span> Aapke Banaye Gaye / Saved Papers:
+                </h4>
+                <div id="papersList" class="space-y-2.5"></div>
+            </div>
+        </div>
+
+        <!-- Section-Wise Paper Editor Form -->
+        <div id="editorForm" class="hidden bg-white/98 backdrop-blur p-4 sm:p-6 rounded-2xl shadow-md border border-emerald-100 space-y-4">
+            <input type="hidden" id="currentPaperId" value="">
+            <div class="flex justify-between items-center border-b pb-3 border-slate-100">
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">📝</span>
+                    <h4 class="font-bold text-emerald-900 text-base" id="formTitle">Paper Editor & Section Manager</h4>
+                </div>
+                <button onclick="closeEditor()" class="text-slate-400 hover:text-slate-600 font-bold text-lg px-2">✕</button>
+            </div>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">School Name / Sanstha Ka Naam</label>
+                    <input type="text" id="schoolName" value="Kashiram Memorial College" placeholder="School Name" class="border border-slate-300 p-2.5 rounded-xl w-full bg-slate-50/50" oninput="saveDraftLocally()">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Paper Mode / Exam Type</label>
+                    <select id="paperMode" class="border border-slate-300 p-2.5 rounded-xl w-full bg-slate-50/50" onchange="saveDraftLocally()">
+                        <option value="Annual Examination">Annual Examination (वार्षिक परीक्षा)</option>
+                        <option value="Half Yearly Examination">Half Yearly Examination (अर्धवार्षिक)</option>
+                        <option value="Monthly Test">Monthly Test (मासिक परीक्षा)</option>
+                        <option value="Unit Test">Unit Test (इकाई परीक्षा)</option>
+                        <option value="Class Test">Class Test (कक्षा परीक्षण)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Class / Kaksha</label>
+                    <input type="text" id="className" placeholder="Jaise: 10th" class="border border-slate-300 p-2.5 rounded-xl w-full bg-slate-50/50" oninput="saveDraftLocally()">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Subject / Vishay</label>
+                    <input type="text" id="subjectName" placeholder="Jaise: Science" class="border border-slate-300 p-2.5 rounded-xl w-full bg-slate-50/50" oninput="saveDraftLocally()">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Total Marks</label>
+                    <input type="text" id="totalMarks" placeholder="Jaise: 50" class="border border-slate-300 p-2.5 rounded-xl w-full bg-slate-50/50" oninput="saveDraftLocally()">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Numbering & Language Style:</label>
+                <select id="langSelect" class="border border-slate-300 p-2.5 rounded-xl w-full bg-slate-50/50" onchange="saveDraftLocally()">
+                    <option value="hi">Hindi (हिंदी - क, ख, ग numbering)</option>
+                    <option value="en">English (A, B, C numbering)</option>
+                </select>
+            </div>
+
+            <!-- Sections Container -->
+            <div class="border-t pt-3 border-slate-100">
+                <div class="flex justify-between items-center mb-2">
+                    <label class="block font-bold text-xs text-emerald-800 uppercase tracking-wider">Independent Sections (MCQ, Matching, Grammar, etc.)</label>
+                    <button type="button" onclick="addSectionBlock(); saveDraftLocally();" class="bg-teal-700 text-white px-2.5 py-1 rounded-lg text-xs font-medium shadow-sm">+ Section Jodein</button>
+                </div>
+                
+                <div id="sectionsContainer" class="space-y-4 max-h-[380px] overflow-y-auto pr-1"></div>
+            </div>
+
+            <div class="flex gap-3 pt-3 border-t border-slate-100">
+                <button onclick="savePaperToCloud()" class="flex-1 bg-emerald-700 active:bg-emerald-800 text-white font-medium p-3 rounded-xl shadow">Cloud Par Save Karein</button>
+                <button onclick="previewPaper()" class="flex-1 bg-teal-800 active:bg-teal-900 text-white font-medium p-3 rounded-xl shadow">Preview & Print</button>
+            </div>
+        </div>
+
+        <!-- Preview & Print Area -->
+        <div id="previewSection" class="hidden bg-white p-5 sm:p-8 rounded-2xl shadow-md border border-slate-200 space-y-4">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 no-print border-b pb-3">
+                <h3 class="font-bold text-base text-slate-800">Paper Preview</h3>
+                <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+                    <select id="printLayout" class="border border-slate-300 p-2 rounded-xl text-xs bg-white flex-1 sm:flex-none">
+                        <option value="portrait">1 Page - 1 Paper (Portrait)</option>
+                        <option value="halfpage">1 Page - 2 Copies (Half Page)</option>
+                    </select>
+                    <button onclick="window.print()" class="bg-slate-800 text-white px-3.5 py-2 rounded-xl text-xs font-medium">Print / PDF</button>
+                    <button onclick="backToDashboard()" class="bg-slate-500 text-white px-3.5 py-2 rounded-xl text-xs font-medium">Wapas</button>
+                </div>
+            </div>
+
+            <div id="printableArea" class="bg-white p-6 border border-slate-200 rounded-xl">
+                <div class="text-center border-b-2 border-slate-800 pb-4 mb-6">
+                    <h2 id="lblSchool" class="text-xl sm:text-2xl font-bold uppercase tracking-wider text-slate-900"></h2>
+                    <p id="lblMode" class="text-xs font-semibold text-emerald-800 uppercase tracking-widest mt-1"></p>
+                    <div class="flex justify-between items-center text-xs sm:text-sm font-semibold text-slate-700 mt-3 px-2">
+                        <span>Class: <span id="lblClass"></span></span>
+                        <span>Subject: <span id="lblSubject"></span></span>
+                        <span>M.M.: <span id="lblMarks"></span></span>
+                    </div>
+                </div>
+                <div id="printContent" class="space-y-6 text-sm sm:text-base text-slate-800"></div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center py-4 text-xs text-slate-500 border-t border-slate-200 bg-white/50">
+        🌱 Secure Teacher Portal | Automated Assessment System 🌿
+    </footer>
+
+    <script>
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxSSFNZcD0dpUvPvqY7paoq8PbpWuoYv2ASS-fNf2D1RP_5XJzkHdpF_5mGII_ALHmOKA/exec; // Apna Apps Script URL dalein
+        
+        let currentTeacher = "";
+
+        window.onload = function() {
+            let savedTeacher = localStorage.getItem('krmc_teacher_name');
+            if(savedTeacher) {
+                currentTeacher = savedTeacher;
+                document.getElementById('teacherName').value = currentTeacher;
+                showDashboard();
+            }
+        };
+
+        function teacherLogin() {
+            let name = document.getElementById('teacherName').value.trim();
+            if(!name) {
+                alert('Kripya apna sahi naam likhein!');
+                return;
+            }
+            currentTeacher = name;
+            localStorage.setItem('krmc_teacher_name', currentTeacher);
+            showDashboard();
+        }
+
+        function teacherLogout() {
+            localStorage.removeItem('krmc_teacher_name');
+            currentTeacher = "";
+            document.getElementById('dashboardSection').classList.add('hidden');
+            document.getElementById('loginSection').classList.remove('hidden');
+            document.getElementById('teacherName').value = "";
+        }
+
+        function showDashboard() {
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('editorForm').classList.add('hidden');
+            document.getElementById('previewSection').classList.add('hidden');
+            document.getElementById('dashboardSection').classList.remove('hidden');
+            document.getElementById('welcomeMsg').innerText = `Namaste, ${currentTeacher} ji!`;
+            fetchTeacherPapers();
+        }
+
+        function fetchTeacherPapers() {
+            let listDiv = document.getElementById('papersList');
+            listDiv.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">Aapke papers load ho rahe hain...</p>';
+
+            fetch(WEB_APP_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'getTeacherPapers', teacherName: currentTeacher })
+            })
+            .then(res => res.json())
+            .then(data => {
+                listDiv.innerHTML = '';
+                if(data.papers && data.papers.length > 0) {
+                    data.papers.forEach(p => {
+                        listDiv.innerHTML += `<div class="flex justify-between items-center border border-emerald-100 bg-emerald-50/40 p-3 rounded-xl">
+                            <div class="truncate pr-2">
+                                <p class="font-bold text-xs sm:text-sm text-slate-800">${p.paperMode} (${p.className} - ${p.subject})</p>
+                                <p class="text-[10px] text-slate-400">School: ${p.schoolName} | Updated: ${new Date(p.timestamp).toLocaleDateString()}</p>
+                            </div>
+                            <div class="flex gap-1.5 flex-shrink-0">
+                                <button onclick='editPaper(${JSON.stringify(p)})' class="bg-amber-600 text-white px-2.5 py-1 rounded-lg text-xs font-medium">Edit</button>
+                                <button onclick='viewPreview(${JSON.stringify(p)})' class="bg-teal-700 text-white px-2.5 py-1 rounded-lg text-xs font-medium">View</button>
+                            </div>
+                        </div>`;
+                    });
+                } else {
+                    listDiv.innerHTML = '<p class="text-slate-400 text-xs text-center py-4">Abhi tak koi paper nahi hai. "+ Naya Paper" par click karein.</p>';
+                }
+            }).catch(err => {
+                listDiv.innerHTML = '<p class="text-rose-500 text-xs text-center">Connection error! Net check karein.</p>';
+            });
+        }
+
+        function newPaperForm() {
+            document.getElementById('currentPaperId').value = '';
+            document.getElementById('className').value = '';
+            document.getElementById('subjectName').value = '';
+            document.getElementById('totalMarks').value = '';
+            document.getElementById('schoolName').value = 'Kashiram Memorial College';
+            document.getElementById('paperMode').value = 'Annual Examination';
+            document.getElementById('sectionsContainer').innerHTML = '';
+            
+            let draft = localStorage.getItem('draft_' + currentTeacher);
+            if(draft && confirm("Kya aap apna pichhla adhura (draft) paper yahin se shuru karna chahte hain?")) {
+                loadDraftData(JSON.parse(draft));
+            } else {
+                addSectionBlock();
+            }
+
+            document.getElementById('formTitle').innerText = 'Naya Paper Banayein (Auto-Save Active)';
+            document.getElementById('dashboardSection').classList.add('hidden');
+            document.getElementById('editorForm').classList.remove('hidden');
+        }
+
+        function closeEditor() {
+            saveDraftLocally();
+            document.getElementById('editorForm').classList.add('hidden');
+            document.getElementById('dashboardSection').classList.remove('hidden');
+            fetchTeacherPapers();
+        }
+
+        function saveDraftLocally() {
+            let paperId = document.getElementById('currentPaperId').value;
+            let schoolName = document.getElementById('schoolName').value;
+            let paperMode = document.getElementById('paperMode').value;
+            let className = document.getElementById('className').value;
+            let subject = document.getElementById('subjectName').value;
+            let marks = document.getElementById('totalMarks').value;
+            let lang = document.getElementById('langSelect').value;
+            
+            let sections = gatherSectionsData();
+            let draftData = { paperId, schoolName, paperMode, className, subject, marks, lang, sections };
+            
+            localStorage.setItem('draft_' + currentTeacher, JSON.stringify(draftData));
+        }
+
+        function autoSaveDraft() {
+            if(document.getElementById('editorForm') && !document.getElementById('editorForm').classList.contains('hidden')) {
+                saveDraftLocally();
+            }
+        }
+
+        function gatherSectionsData() {
+            let sections = [];
+            document.querySelectorAll('.section-block').forEach(block => {
+                let sName = block.querySelector('.sec-name').value;
+                let sType = block.querySelector('.sec-type').value;
+                let questions = [];
+                block.querySelectorAll('.q-row').forEach(row => {
+                    let qText = row.querySelector('.q-text').value;
+                    let opts = [];
+                    row.querySelectorAll('.opt-val').forEach(opt => opts.push(opt.value));
+                    if(qText) questions.push({ question: qText, options: opts });
+                });
+                if(questions.length > 0) sections.push({ sectionName: sName, sectionType: sType, questions: questions });
+            });
+            return sections;
+        }
+
+        function addSectionBlock(secData = null) {
+            let container = document.getElementById('sectionsContainer');
+            let secId = 'sec_' + Date.now() + Math.random().toString(36).substring(2,5);
+            
+            let sName = secData ? secData.sectionName : 'Section A';
+            let sType = secData ? secData.sectionType : 'mcq';
+            
+            let html = `<div class="section-block border border-emerald-200 bg-emerald-50/20 p-3.5 rounded-xl space-y-3" id="${secId}">
+                <div class="flex justify-between items-center gap-2">
+                    <input type="text" value="${sName}" placeholder="Section Name (Jaise: Grammar Section)" class="sec-name border border-slate-300 p-2 rounded-lg text-xs font-semibold w-1/3 bg-white" oninput="saveDraftLocally()">
+                    <select class="sec-type border border-slate-300 p-2 rounded-lg text-xs bg-white w-1/2" onchange="toggleSecType(this); saveDraftLocally();">
+                        <option value="mcq" ${sType=='mcq'?'selected':''}>MCQ (बहुविकल्पीय)</option>
+                        <option value="blanks" ${sType=='blanks'?'selected':''}>Fill in the Blanks (रिक्त स्थान)</option>
+                        <option value="truefalse" ${sType=='truefalse'?'selected':''}>True / False (सत्य / असत्य)</option>
+                        <option value="matching" ${sType=='matching'?'selected':''}>Matching (मिलान करो)</option>
+                        <option value="veryshort" ${sType=='veryshort'?'selected':''}>Very Short Answer (अति लघु)</option>
+                        <option value="short" ${sType=='short'?'selected':''}>Short Answer (लघु उत्तरीय)</option>
+                        <option value="long" ${sType=='long'?'selected':''}>Long Answer (दीर्घ उत्तरीय)</option>
+                        <option value="custom" ${sType=='custom'?'selected':''}>Custom / Grammar (नया खंड / व्याकरण)</option>
+                    </select>
+                    <button type="button" onclick="document.getElementById('${secId}').remove(); saveDraftLocally();" class="text-rose-500 font-bold text-sm px-2">🗑️</button>
+                </div>
+                <div class="questions-container space-y-2"></div>
+                <button type="button" onclick="addQuestionRow('${secId}'); saveDraftLocally();" class="bg-teal-600 text-white text-[11px] px-2.5 py-1 rounded-lg">+ Sawal Jodein</button>
+            </div>`;
+            
+            container.insertAdjacentHTML('beforeend', html);
+            let qContainer = document.querySelector(`#${secId} .questions-container`);
+            if(secData && secData.questions) {
+                secData.questions.forEach(q => appendQuestionHTML(qContainer, sType, q));
+            } else {
+                appendQuestionHTML(qContainer, sType);
+            }
+        }
+
+        function toggleSecType(selectEl) {
+            let block = selectEl.closest('.section-block');
+            let qContainer = block.querySelector('.questions-container');
+            qContainer.innerHTML = '';
+            appendQuestionHTML(qContainer, selectEl.value);
+        }
+
+        function appendQuestionHTML(container, type, qData = null) {
+            let qText = qData ? qData.question : '';
+            let html = `<div class="q-row border border-slate-200 bg-white p-3 rounded-xl space-y-2" data-type="${type}">
+                <div class="flex gap-2 items-center">
+                    <input type="text" value="${qText}" placeholder="${type=='custom' ? 'Jaise: Vilom shabd likhein (Antonyms)...' : 'Sawal likhein ya bolkar type karein...'}" class="q-text border border-slate-300 p-2 rounded-lg text-xs flex-grow" oninput="saveDraftLocally()">
+                    <button type="button" onclick="startSpeechForQ(this)" class="bg-rose-500 text-white px-2 py-1.5 rounded-lg text-[10px]">🎙️ Bolte</button>
+                    <button type="button" onclick="this.closest('.q-row').remove(); saveDraftLocally();" class="text-rose-400 text-xs font-bold px-1">✕</button>
+                </div>`;
+            
+            if(type === 'mcq') {
+                let opts = qData ? qData.options : ['', '', '', ''];
+                html += `<div class="grid grid-cols-2 gap-2 pl-2 pt-1">
+                    <input type="text" value="${opts[0]}" placeholder="Option 1" class="opt-val border border-slate-200 p-1.5 rounded text-[11px]" oninput="saveDraftLocally()">
+                    <input type="text" value="${opts[1]}" placeholder="Option 2" class="opt-val border border-slate-200 p-1.5 rounded text-[11px]" oninput="saveDraftLocally()">
+                    <input type="text" value="${opts[2]}" placeholder="Option 3" class="opt-val border border-slate-200 p-1.5 rounded text-[11px]" oninput="saveDraftLocally()">
+                    <input type="text" value="${opts[3]}" placeholder="Option 4" class="opt-val border border-slate-200 p-1.5 rounded text-[11px]" oninput="saveDraftLocally()">
+                </div>`;
+            } else if(type === 'matching') {
+                let opts = qData ? qData.options : ['', ''];
+                html += `<div class="grid grid-cols-2 gap-2 pl-2 pt-1">
+                    <input type="text" value="${opts[0]}" placeholder="Column A (Item)" class="opt-val border border-slate-200 p-1.5 rounded text-[11px]" oninput="saveDraftLocally()">
+                    <input type="text" value="${opts[1]}" placeholder="Column B (Matching Item)" class="opt-val border border-slate-200 p-1.5 rounded text-[11px]" oninput="saveDraftLocally()">
+                </div>`;
+            } else if(type === 'truefalse') {
+                html += `<div class="text-[11px] text-slate-500 pl-1 italic">✓ Yeh sawal Satya / Asatya format me print hoga.</div>`;
+            } else if(type === 'blanks') {
+                html += `<div class="text-[11px] text-slate-500 pl-1 italic">✓ Yeh sawal Rikt Sthan (Fill in blanks) format me print hoga.</div>`;
+            } else if(type === 'custom') {
+                let opts = qData ? qData.options : [''];
+                html += `<div class="pl-2 pt-1">
+                    <input type="text" value="${opts[0] || ''}" placeholder="Optional Sub-text ya Answer space (Jaise: Synonyms/Antonyms details)" class="opt-val border border-slate-200 p-1.5 rounded text-[11px] w-full" oninput="saveDraftLocally()">
+                </div>`;
+            }
+            html += `</div>`;
+            container.insertAdjacentHTML('beforeend', html);
+        }
+
+        function addQuestionRow(secId) {
+            let block = document.getElementById(secId);
+            let type = block.querySelector('.sec-type').value;
+            appendQuestionHTML(block.querySelector('.questions-container'), type);
+        }
+
+        function startSpeechForQ(btn) {
+            if (!('webkitSpeechRecognition' in window)) {
+                alert('Voice typing ke liye Google Chrome browser use karein.');
+                return;
+            }
+            let lang = document.getElementById('langSelect').value === 'hi' ? 'hi-IN' : 'en-IN';
+            const recognition = new webkitSpeechRecognition();
+            recognition.lang = lang;
+            recognition.onresult = (e) => {
+                let input = btn.closest('.q-row').querySelector('.q-text');
+                input.value += (input.value ? " " : "") + e.results[0][0].transcript;
+                saveDraftLocally();
+            };
+            recognition.start();
+        }
+
+        function savePaperToCloud() {
+            const paperId = document.getElementById('currentPaperId').value;
+            const schoolName = document.getElementById('schoolName').value;
+            const paperMode = document.getElementById('paperMode').value;
+            const className = document.getElementById('className').value;
+            const subject = document.getElementById('subjectName').value;
+            const marks = document.getElementById('totalMarks').value;
+            const lang = document.getElementById('langSelect').value;
+
+            if(!className || !subject) {
+                alert('Kripya Class aur Subject zaroor bharein!');
+                return;
+            }
+
+            let sections = gatherSectionsData();
+            if(sections.length === 0) {
+                alert('Kam se kam ek sawal add karein!');
+                return;
+            }
+
+            const paperData = JSON.stringify({ marks, lang, sections });
+            event.target.innerText = "Cloud par save ho raha hai...";
+
+            fetch(WEB_APP_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'save', paperId, teacherName: currentTeacher, schoolName, paperMode, className, subject, paperData })
+            })
+            .then(res => res.json())
+            .then(data => {
+                alert('Paper Cloud par safalpurvak save ho gaya!');
+                localStorage.removeItem('draft_' + currentTeacher);
+                event.target.innerText = "Cloud Par Save Karein";
+                closeEditor();
+            }).catch(err => {
+                alert('Save karne me error aayi!');
+                event.target.innerText = "Cloud Par Save Karein";
+            });
+        }
+
+        function editPaper(p) {
+            document.getElementById('currentPaperId').value = p.paperId;
+            document.getElementById('schoolName').value = p.schoolName || 'Kashiram Memorial College';
+            document.getElementById('paperMode').value = p.paperMode || 'Annual Examination';
+            document.getElementById('className').value = p.className;
+            document.getElementById('subjectName').value = p.subject;
+            let data = JSON.parse(p.paperData);
+            document.getElementById('totalMarks').value = data.marks || '';
+            document.getElementById('langSelect').value = data.lang || 'hi';
+            
+            let container = document.getElementById('sectionsContainer');
+            container.innerHTML = '';
+            if(data.sections) {
+                data.sections.forEach(sec => addSectionBlock(sec));
+            }
+            
+            document.getElementById('formTitle').innerText = 'Paper Edit Karein';
+            document.getElementById('dashboardSection').classList.add('hidden');
+            document.getElementById('editorForm').classList.remove('hidden');
+        }
+
+        function loadDraftData(data) {
+            document.getElementById('currentPaperId').value = data.paperId || '';
+            document.getElementById('schoolName').value = data.schoolName || 'Kashiram Memorial College';
+            document.getElementById('paperMode').value = data.paperMode || 'Annual Examination';
+            document.getElementById('className').value = data.className || '';
+            document.getElementById('subjectName').value = data.subject || '';
+            document.getElementById('totalMarks').value = data.marks || '';
+            document.getElementById('langSelect').value = data.lang || 'hi';
+            
+            let container = document.getElementById('sectionsContainer');
+            container.innerHTML = '';
+            if(data.sections && data.sections.length > 0) {
+                data.sections.forEach(sec => addSectionBlock(sec));
+            } else {
+                addSectionBlock();
+            }
+        }
+
+        function viewPreview(p) {
+            document.getElementById('lblSchool').innerText = p.schoolName || 'Kashiram Memorial College';
+            document.getElementById('lblMode').innerText = p.paperMode || 'Examination Paper';
+            document.getElementById('lblClass').innerText = p.className;
+            document.getElementById('lblSubject').innerText = p.subject;
+            let data = JSON.parse(p.paperData);
+            document.getElementById('lblMarks').innerText = data.marks || 'N/A';
+            
+            let lang = data.lang || 'hi';
+            let contentHTML = '';
+            
+            if(data.sections) {
+                data.sections.forEach((sec, sIdx) => {
+                    let secNum = lang === 'hi' ? ['१', '२', '३', '४', '५', '६', '७', '८'][sIdx] || (sIdx+1) : (sIdx+1);
+                    contentHTML += `<div class="mb-5"><h4 class="font-bold text-sm sm:text-base border-b border-slate-300 pb-1 mb-2 text-emerald-900 uppercase">${secNum}. ${sec.sectionName}</h4><div class="space-y-3 pl-2">`;
+                    
+                    sec.questions.forEach((q, qIdx) => {
+                        let qNum = lang === 'hi' ? ['(क)', '(ख)', '(ग)', '(घ)', '(ङ)', '(च)'][qIdx] || (qIdx+1)+'.' : (qIdx+1)+'.';
+                        contentHTML += `<div class="text-xs sm:text-sm"><b>${qNum}</b> ${q.question}</div>`;
+                        
+                        if(sec.sectionType === 'mcq' && q.options && q.options.some(o => o)) {
+                            contentHTML += `<div class="grid grid-cols-2 gap-2 pl-4 pt-1 mb-2">`;
+                            q.options.forEach((opt, oIdx) => {
+                                if(opt) {
+                                    let optNum = lang === 'hi' ? ['(i)', '(ii)', '(iii)', '(iv)'][oIdx] : ['(a)', '(b)', '(c)', '(d)'][oIdx];
+                                    contentHTML += `<div class="text-xs text-slate-700"><b>${optNum}</b> ${opt}</div>`;
+                                }
+                            });
+                            contentHTML += `</div>`;
+                        } else if(sec.sectionType === 'matching' && q.options && q.options.length >= 2) {
+                            contentHTML += `<div class="flex justify-between pl-4 pr-12 text-xs text-slate-700 py-1 font-medium bg-slate-50 rounded mb-1">
+                                <span>(A) ${q.options[0]}</span>
+                                <span>(B) ${q.options[1]}</span>
+                            </div>`;
+                        } else if(sec.sectionType === 'truefalse') {
+                            contentHTML += `<div class="text-xs text-slate-600 pl-4 pb-1 italic">(सत्य / असत्य) [ &nbsp; ]</div>`;
+                        } else if(sec.sectionType === 'custom' && q.options && q.options[0]) {
+                            contentHTML += `<div class="text-xs text-slate-600 pl-4 pb-1">${q.options[0]}</div>`;
+                        }
+                    });
+                    contentHTML += `</div></div>`;
+                });
+            }
+
+            let layout = document.getElementById('printLayout').value;
+            if(layout === 'halfpage') {
+                document.getElementById('printContent').innerHTML = `<div class="border-b border-dashed pb-6 mb-6">${contentHTML}</div><div>${contentHTML}</div>`;
+            } else {
+                document.getElementById('printContent').innerHTML = contentHTML;
+            }
+
+            document.getElementById('dashboardSection').classList.add('hidden');
+            document.getElementById('editorForm').classList.add('hidden');
+            document.getElementById('previewSection').classList.remove('hidden');
+        }
+
+        function previewPaper() {
+            const schoolName = document.getElementById('schoolName').value;
+            const paperMode = document.getElementById('paperMode').value;
+            const className = document.getElementById('className').value;
+            const subject = document.getElementById('subjectName').value;
+            const marks = document.getElementById('totalMarks').value;
+            const lang = document.getElementById('langSelect').value;
+            let sections = gatherSectionsData();
+
+            viewPreview({
+                schoolName: schoolName,
+                paperMode: paperMode,
+                className: className,
+                subject: subject,
+                paperData: JSON.stringify({ marks, lang, sections })
+            });
+        }
+
+        function backToDashboard() {
+            document.getElementById('previewSection').classList.add('hidden');
+            document.getElementById('dashboardSection').classList.remove('hidden');
+            fetchTeacherPapers();
+        }
+    </script>
+</body>
+</html>
